@@ -1,0 +1,762 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auto Reply Admin</title>
+<style>
+  :root {
+    --bg: #f4f6f9; --card: #fff; --text: #1d2430; --muted: #6b7686; --line: #e3e7ee;
+    --accent: #2a8bd8; --accent-soft: #e6f2fc; --ok: #1f9d55; --warn: #d97706; --bad: #d64545;
+    --bubble-in: #fff; --bubble-out: #e3f6d8; --bubble-admin: #dcecfb;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans Khmer", "Khmer OS Battambang", "Khmer Sangam MN", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12161c; --card: #1b2129; --text: #e6e9ee; --muted: #8d97a5; --line: #2b333e;
+      --accent: #4ca3e8; --accent-soft: #1d3245; --bubble-in: #232b35; --bubble-out: #24402a; --bubble-admin: #1f3550;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 var(--font); }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  .hidden { display: none !important; }
+
+  /* login */
+  #login { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+  #login form { background: var(--card); padding: 32px; border-radius: 14px; width: 100%; max-width: 360px; border: 1px solid var(--line); }
+  #login h1 { margin: 0 0 4px; font-size: 22px; }
+
+  /* layout */
+  header { background: var(--card); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+  .bar { max-width: 1100px; margin: 0 auto; padding: 0 16px; display: flex; align-items: center; gap: 16px; height: 56px; }
+  .brand { font-weight: 700; white-space: nowrap; }
+  nav { display: flex; gap: 4px; overflow-x: auto; flex: 1; }
+  nav button { background: none; border: 0; padding: 8px 12px; border-radius: 8px; cursor: pointer; color: var(--muted); white-space: nowrap; }
+  nav button.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 60px; }
+  h2 { margin: 0 0 4px; font-size: 20px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 16px; }
+  .stat .n { font-size: 28px; font-weight: 700; }
+  .stat .l { color: var(--muted); font-size: 13px; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .spacer { flex: 1; }
+
+  /* forms */
+  label { display: block; font-weight: 600; font-size: 13px; margin: 14px 0 6px; }
+  .hint { color: var(--muted); font-size: 13px; font-weight: 400; }
+  input[type=text], input[type=password], input[type=number], textarea, select {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
+  }
+  textarea { min-height: 90px; resize: vertical; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .btn { border: 1px solid var(--line); background: var(--card); padding: 9px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.danger { color: var(--bad); }
+  .btn.small { padding: 5px 10px; font-size: 13px; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .switch { position: relative; display: inline-block; width: 44px; height: 24px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch span { position: absolute; inset: 0; background: var(--line); border-radius: 24px; cursor: pointer; transition: .2s; }
+  .switch span::before { content: ""; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .2s; }
+  .switch input:checked + span { background: var(--ok); }
+  .switch input:checked + span::before { transform: translateX(20px); }
+  .toggle-line { display: flex; align-items: center; gap: 12px; }
+  .toggle-line b { display: block; }
+
+  /* badges & tables */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; background: var(--accent-soft); color: var(--accent); }
+  .badge.ok { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+  .badge.bad { background: color-mix(in srgb, var(--bad) 15%, transparent); color: var(--bad); }
+  .badge.warn { background: color-mix(in srgb, var(--warn) 15%, transparent); color: var(--warn); }
+  .rule { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: start; padding: 16px 0; border-top: 1px solid var(--line); }
+  .rule:first-child { border-top: 0; padding-top: 0; }
+  .rule .kw { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+  .rule .kw span { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 0 6px; font-size: 13px; }
+  .rule .reply { color: var(--muted); white-space: pre-wrap; font-size: 14px; }
+  .rule.off { opacity: .55; }
+  .empty { color: var(--muted); text-align: center; padding: 30px 0; }
+
+  /* chats */
+  .chats { display: grid; grid-template-columns: 300px 1fr; gap: 16px; min-height: 60vh; }
+  .chat-list { padding: 0; overflow: auto; max-height: 75vh; }
+  .chat-item { padding: 12px 16px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .chat-item:hover, .chat-item.active { background: var(--accent-soft); }
+  .chat-item .last { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .thread { display: flex; flex-direction: column; padding: 0; max-height: 75vh; }
+  .thread-head { padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .msgs { flex: 1; overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; background: var(--bg); min-height: 300px; }
+  .msg { max-width: 75%; padding: 8px 12px; border-radius: 12px; word-wrap: break-word; border: 1px solid var(--line); }
+  .msg .t { white-space: pre-wrap; }
+  .msg.in { align-self: flex-start; background: var(--bubble-in); }
+  .msg.bot, .msg.owner, .msg.admin { align-self: flex-end; background: var(--bubble-out); }
+  .msg.admin { background: var(--bubble-admin); }
+  .msg .meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .composer { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--line); }
+  .composer textarea { min-height: 44px; height: 44px; }
+
+  /* modal */
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: grid; place-items: center; padding: 16px; z-index: 20; }
+  .modal .card { width: 100%; max-width: 560px; max-height: 92vh; overflow: auto; margin: 0; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 18px; border-radius: 8px; z-index: 30; }
+  .vars code { background: var(--bg); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); cursor: pointer; }
+  .steps li { margin-bottom: 6px; }
+  .attach { margin-top: 10px; padding: 10px; border: 1px dashed var(--line); border-radius: 10px; }
+  .attach .att-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+  .attach .att-preview { margin-top: 8px; }
+  .attach .att-list { display: flex; flex-wrap: wrap; gap: 10px; }
+  .attach .att-item { margin-top: 10px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; max-width: 100%; }
+  .attach .att-item img, .attach .att-item video { max-width: 160px; max-height: 160px; }
+  .attach .att-preview img, .attach .att-preview video, .preview-media img, .preview-media video { max-width: 220px; max-height: 220px; border-radius: 8px; display: block; }
+  .attach audio, .preview-media audio { width: 100%; max-width: 320px; }
+  .rec-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--bad); animation: blink 1s infinite; vertical-align: middle; }
+  @keyframes blink { 50% { opacity: .2; } }
+  .preview { var(--bubble-out); border-radius: 12px; padding: 10px 14px; margin-top: 8px; white-space: pre-wrap; border: 1px solid var(--line); }
+
+  @media (max-width: 760px) {
+    .chats { grid-template-columns: 1fr; }
+    .chat-list { max-height: 260px; }
+    .brand { display: none; }
+    .rule { grid-template-columns: auto 1fr; }
+    .rule .actions { grid-column: 1 / -1; }
+  }
+</style>
+</head>
+<body>
+
+<div id="login" class="hidden">
+  <form id="loginForm">
+    <h1>🤖 Auto Reply Admin</h1>
+    <p class="sub">Log in to manage your bot replies.</p>
+    <label for="pw">Password</label>
+    <input id="pw" type="password" autocomplete="current-password" required>
+    <p id="loginErr" style="color:var(--bad)"></p>
+    <button class="btn primary" style="width:100%">Log in</button>
+  </form>
+</div>
+
+<div id="app" class="hidden">
+  <header>
+    <div class="bar">
+      <div class="brand">🤖 Auto Reply</div>
+      <nav id="tabs">
+        <button data-tab="dash" class="active">Dashboard</button>
+        <button data-tab="accounts" class="hidden" id="accountsTabBtn">Accounts</button>
+        <button data-tab="rules">Reply rules</button>
+        <button data-tab="chats">Chats</button>
+        <button data-tab="settings">Settings</button>
+        <button data-tab="test">Test</button>
+      </nav>
+      <button class="btn small" id="logout">Log out</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Dashboard -->
+    <section id="tab-dash">
+      <h2>Dashboard</h2>
+      <p class="sub">Status of your bot.</p>
+      <div class="card toggle-line">
+        <label class="switch"><input type="checkbox" id="masterSwitch"><span></span></label>
+        <div><b>Auto-reply is <span id="masterLabel">…</span></b><span class="hint">Turn off to stop all automatic replies instantly.</span></div>
+      </div>
+      <div class="grid" id="stats"></div>
+      <div class="card">
+        <div class="row"><b id="botTitle">Bot</b><span class="spacer"></span><span id="botBadge"></span></div>
+        <p id="botInfo" class="hint" style="margin:6px 0 0"></p>
+      </div>
+      <div class="card" id="shareCard">
+        <b>Share your bot</b>
+        <p class="hint" style="margin:6px 0 10px">Customers open this link and press <b>Start</b>. The bot replies automatically, and you can reply yourself from <b>Chats</b>.</p>
+        <div class="row">
+          <a id="botLink" href="#" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;word-break:break-all">—</a>
+          <button class="btn small" id="copyLink" type="button">Copy link</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Accounts -->
+    <section id="tab-accounts" class="hidden">
+      <div class="row">
+        <div><h2>Telegram accounts</h2><p class="sub">Every account here auto-replies to private messages using the same reply rules. គណនីទាំងអស់នេះនឹងឆ្លើយស្វ័យប្រវត្តិ។</p></div>
+        <span class="spacer"></span>
+        <button class="btn primary" id="addAccount">+ Add account</button>
+      </div>
+      <div class="card" id="accountList"></div>
+      <p class="hint">⚠️ Logging in here works like logging in on a new device. Each account shows up as “Auto Reply Admin” in Telegram → Settings → Devices. Removing an account here also logs it out there.</p>
+    </section>
+
+    <!-- Rules -->
+    <section id="tab-rules" class="hidden">
+      <div class="row">
+        <div><h2>Reply rules</h2><p class="sub">When a message contains a keyword, the bot sends your reply. The first matching rule wins (lowest priority number first).</p></div>
+        <span class="spacer"></span>
+        <button class="btn primary" id="addRule">+ New rule</button>
+      </div>
+      <div class="card" id="ruleList"></div>
+    </section>
+
+    <!-- Chats -->
+    <section id="tab-chats" class="hidden">
+      <h2>Chats</h2>
+      <p class="sub">Conversations handled by the bot. You can reply manually or stop the bot in one chat.</p>
+      <div class="chats">
+        <div class="card chat-list" id="chatList"></div>
+        <div class="card thread" id="thread"><div class="empty">Select a chat</div></div>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section id="tab-settings" class="hidden">
+      <h2>Settings</h2>
+      <p class="sub">Welcome message, default reply and timing.</p>
+      <form id="settingsForm">
+        <div class="card">
+          <div class="toggle-line">
+            <label class="switch"><input type="checkbox" name="welcome_enabled"><span></span></label>
+            <div><b>Welcome message</b><span class="hint">Sent once, the first time a person messages you.</span></div>
+          </div>
+          <textarea name="welcome_text" style="margin-top:12px"></textarea>
+          <p class="hint vars">Variables: <code>{first_name}</code> <code>{name}</code> <code>{username}</code></p>
+          <div class="attach" id="welcomeAttach"></div>
+        </div>
+        <div class="card">
+          <div class="toggle-line">
+            <label class="switch"><input type="checkbox" name="fallback_enabled"><span></span></label>
+            <div><b>Default reply</b><span class="hint">Sent when no rule matches.</span></div>
+          </div>
+          <textarea name="fallback_text" style="margin-top:12px"></textarea>
+          <div class="attach" id="fallbackAttach"></div>
+          <label>Don't repeat the default reply in the same chat for (minutes)</label>
+          <input type="number" min="0" step="1" name="fallback_cooldown_minutes">
+        </div>
+        <div class="card">
+          <b>Timing</b>
+          <label>Reply delay (seconds) <span class="hint">— shows "typing…" first so it feels natural</span></label>
+          <input type="number" min="0" max="30" step="0.5" name="reply_delay_seconds">
+          <label>Pause auto-reply in a chat after you reply yourself (minutes) <span class="hint">— 0 = never pause</span></label>
+          <input type="number" min="0" step="1" name="owner_pause_minutes">
+        </div>
+        <button class="btn primary">Save settings</button>
+      </form>
+    </section>
+
+    <!-- Test -->
+    <section id="tab-test" class="hidden">
+      <h2>Test your replies</h2>
+      <p class="sub">Type a message like a customer would. Nothing is sent to Telegram.</p>
+      <div class="card">
+        <form id="testForm">
+          <label>Customer message</label>
+          <input type="text" id="testText" placeholder="e.g. តម្លៃប៉ុន្មាន?">
+          <label class="row" style="font-weight:400"><input type="checkbox" id="testNew"> Treat as first message (include welcome)</label>
+          <button class="btn primary" style="margin-top:12px">Test</button>
+        </form>
+        <div id="testOut"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Account login -->
+<div class="modal hidden" id="accModal">
+  <div class="card">
+    <div class="row"><h2 style="margin:0">Add Telegram account</h2><span class="spacer"></span><button class="btn small" id="accClose" type="button">✕</button></div>
+    <div class="row" id="accMethods" style="margin:14px 0 4px">
+      <button class="btn small primary" data-method="qr" type="button">📷 Scan QR code (easiest)</button>
+      <button class="btn small" data-method="phone" type="button">📱 Phone number</button>
+    </div>
+
+    <div id="accQr" class="hidden" style="text-align:center">
+      <div id="qrBox" style="display:inline-block;background:#fff;padding:12px;border-radius:12px;margin:12px 0;min-height:240px;min-width:240px"></div>
+      <ol class="steps hint" style="text-align:left">
+        <li>Open Telegram on your <b>phone</b> (the account you want to add).</li>
+        <li>Go to <b>Settings → Devices → Link Desktop Device</b>.</li>
+        <li>Point the camera at this QR code. បើក Telegram លើទូរស័ព្ទ → Settings → Devices → Link Desktop Device ហើយស្កេន QR។</li>
+      </ol>
+    </div>
+
+    <form id="accPhoneForm" class="hidden">
+      <label>Phone number with country code</label>
+      <input type="text" name="phone" placeholder="+85512345678" autocomplete="off">
+      <button class="btn primary" style="margin-top:12px">Send code</button>
+    </form>
+
+    <form id="accCodeForm" class="hidden">
+      <label>Code from Telegram <span class="hint">— check the "Telegram" chat in your app</span></label>
+      <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" placeholder="12345">
+      <button class="btn primary" style="margin-top:12px">Log in</button>
+    </form>
+
+    <form id="accPwForm" class="hidden">
+      <label>Two-step verification password <span class="hint">— this account has a cloud password</span></label>
+      <input type="password" name="password" autocomplete="current-password">
+      <button class="btn primary" style="margin-top:12px">Log in</button>
+    </form>
+
+    <p id="accMsg" class="hint" style="margin-top:12px"></p>
+  </div>
+</div>
+
+<!-- Rule editor -->
+<div class="modal hidden" id="ruleModal">
+  <form class="card" id="ruleForm">
+    <h2 id="ruleTitle">New rule</h2>
+    <label>Name</label>
+    <input type="text" name="name" placeholder="e.g. Price question">
+    <label>Keywords <span class="hint">— one per line</span></label>
+    <textarea name="keywords" placeholder="price&#10;តម្លៃ&#10;how much" required></textarea>
+    <div class="row">
+      <div style="flex:2;min-width:180px">
+        <label>Match when message…</label>
+        <select name="match_type">
+          <option value="contains">contains the keyword</option>
+          <option value="exact">is exactly the keyword</option>
+          <option value="starts">starts with the keyword</option>
+          <option value="regex">matches regex (advanced)</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:100px">
+        <label>Priority</label>
+        <input type="number" name="priority" value="100">
+      </div>
+    </div>
+    <label>Reply</label>
+    <textarea name="reply" style="min-height:130px"></textarea>
+    <p class="hint vars">Variables: <code>{first_name}</code> <code>{name}</code> <code>{username}</code></p>
+    <div class="attach" id="ruleAttach"></div>
+    <label class="row" style="font-weight:400"><input type="checkbox" name="enabled" checked> Enabled</label>
+    <p id="ruleErr" style="color:var(--bad)"></p>
+    <div class="row">
+      <button type="button" class="btn danger hidden" id="ruleDelete">Delete</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="ruleCancel">Cancel</button>
+      <button class="btn primary">Save</button>
+    </div>
+  </form>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const $ =(s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtTime = t => t ? new Date(t * 1000).toLocaleString() : "";
+
+async function api(path, method = "GET", body) {
+  const res = await fetch("/api" + path, {
+    method, credentials: "same-origin",
+    headers: { "Content-Type": "application/json", "X-Requested-With": "admin" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && path !== "/login") { showLogin(); throw new Error("Please log in"); }
+  if (!res.ok) throw new Error(data.error || "Request failed");
+  return data;
+}
+function toast(msg) {
+  const t = document.createElement("div"); t.className = "toast"; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2500);
+}
+
+/* ---------- auth ---------- */
+function showLogin() { $("#app").classList.add("hidden"); $("#login").classList.remove("hidden"); $("#pw").focus(); }
+function showApp() { $("#login").classList.add("hidden"); $("#app").classList.remove("hidden"); openTab(currentTab()); }
+$("#loginForm").onsubmit = async e => {
+  e.preventDefault(); $("#loginErr").textContent = "";
+  try { await api("/login", "POST", { password: $("#pw").value }); $("#pw").value = ""; showApp(); }
+  catch (err) { $("#loginErr").textContent = err.message; }
+};
+$("#logout").onclick = async () => { await api("/logout", "POST").catch(() => {}); showLogin(); };
+
+/* ---------- tabs ---------- */
+let pollTimer = null;
+function currentTab() { try { return localStorage.getItem("tab") || "dash"; } catch { return "dash"; } }
+function openTab(name) {
+  try { localStorage.setItem("tab", name); } catch {}
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+  document.querySelectorAll("main > section").forEach(s => s.classList.toggle("hidden", s.id !== "tab-" + name));
+  clearInterval(pollTimer);
+  ({ dash: loadDash, accounts: loadAccounts, rules: loadRules, chats: loadChats, settings: loadSettings, test: () => {} })[name]?.();
+  const poll = { dash: loadDash, chats: refreshChats, accounts: loadAccounts }[name];
+  if (poll) pollTimer = setInterval(poll, 5000);
+}
+$("#tabs").onclick = e => { if (e.target.dataset.tab) openTab(e.target.dataset.tab); };
+
+/* ---------- dashboard ---------- */
+async function loadDash() {
+  const d = await api("/status");
+  $("#masterSwitch").checked = d.bot_enabled;
+  $("#masterLabel").textContent = d.bot_enabled ? "ON" : "OFF";
+  const s = d.stats;
+  $("#stats").innerHTML = [
+    [s.incoming_24h, "Messages received (24h)"], [s.auto_replies_24h, "Auto replies sent (24h)"],
+    [s.chats, "Chats"], [s.rules, "Active rules"],
+  ].map(([n, l]) => `<div class="card stat" style="margin:0"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
+  const b = d.bot;
+  const userMode = b.mode === "user";
+  $("#botTitle").textContent = userMode ? "Telegram accounts" : "Bot";
+  $("#shareCard").classList.toggle("hidden", userMode);
+  $("#accountsTabBtn").classList.toggle("hidden", !userMode);
+  if (userMode) {
+    $("#botBadge").innerHTML = b.accounts === 0 ? `<span class="badge warn">No account yet</span>`
+      : `<span class="badge ${b.online_accounts ? "ok" : "bad"}">${b.online_accounts} of ${b.accounts} online</span>`;
+    $("#botInfo").innerHTML = (b.accounts === 0 ? "Add a Telegram account to start auto-replying. " : "")
+      + `<a href="#" onclick="openTab('accounts');return false" style="color:var(--accent)">Manage accounts →</a>`;
+  } else if (!b.configured) {
+    $("#botBadge").innerHTML = `<span class="badge bad">Not configured</span>`;
+    $("#botInfo").textContent = "Put BOT_TOKEN in the .env file and restart.";
+  } else {
+    $("#botBadge").innerHTML = b.online ? `<span class="badge ok">Online</span>` : `<span class="badge bad">Offline</span>`;
+    $("#botInfo").innerHTML = b.name ? (userMode ? "Auto-replying as " : "") + `${esc(b.name)}${b.username ? " · @" + esc(b.username) : ""}` : "Connecting…";
+    if (b.last_error) $("#botInfo").innerHTML += `<br><span style="color:var(--bad)">${esc(b.last_error)}</span>`;
+    if (b.username) { const url = "https://t.me/" + b.username; $("#botLink").textContent = url; $("#botLink").href = url; }
+  }
+}
+$("#copyLink").onclick = async () => {
+  try { await navigator.clipboard.writeText($("#botLink").href); toast("Link copied"); } catch { toast("Copy failed"); }
+};
+$("#masterSwitch").onchange = async e => {
+  await api("/settings", "PUT", { bot_enabled: e.target.checked });
+  toast(e.target.checked ? "Auto-reply turned ON" : "Auto-reply turned OFF"); loadDash();
+};
+
+/* ---------- accounts ---------- */
+async function loadAccounts() {
+  const list = await api("/accounts");
+  $("#accountList").innerHTML = list.length ? list.map(a => `
+    <div class="rule ${a.enabled ? "" : "off"}">
+      <label class="switch" title="Auto-reply on/off for this account"><input type="checkbox" data-acc-toggle="${a.id}" ${a.enabled ? "checked" : ""}><span></span></label>
+      <div>
+        <b>${esc(a.name || "Account")}</b> <span class="hint">${a.username ? "@" + esc(a.username) : ""} ${a.phone ? "· " + esc(a.phone) : ""}</span><br>
+        ${!a.enabled ? `<span class="badge">Off</span>` : a.online ? `<span class="badge ok">Online · auto-replying</span>` : `<span class="badge bad">Offline</span>`}
+        ${a.last_error ? `<div style="color:var(--bad);font-size:13px;margin-top:4px">${esc(a.last_error)}</div>` : ""}
+      </div>
+      <div class="actions"><button class="btn small danger" data-acc-remove="${a.id}" data-name="${esc(a.name)}">Remove</button></div>
+    </div>`).join("")
+    : `<div class="empty">No accounts yet. Click “+ Add account”.</div>`;
+}
+$("#accountList").onchange = async e => {
+  const id = e.target.dataset.accToggle; if (!id) return;
+  try { await api("/accounts/" + id, "PUT", { enabled: e.target.checked }); } catch (err) { toast(err.message); }
+  loadAccounts();
+};
+$("#accountList").onclick = async e => {
+  const id = e.target.dataset.accRemove; if (!id) return;
+  if (!confirm(`Remove ${e.target.dataset.name}? This logs the account out of this app (your Telegram account itself is not deleted).`)) return;
+  try { await api("/accounts/" + id, "DELETE"); toast("Account removed"); } catch (err) { toast(err.message); }
+  loadAccounts();
+};
+
+// ----- login window -----
+let login = null, loginPoll = null, qrShown = null;
+function showLoginStep(view) {
+  login = view;
+  const st = view?.state;
+  $("#accQr").classList.toggle("hidden", st !== "waiting_scan");
+  $("#accCodeForm").classList.toggle("hidden", st !== "need_code");
+  $("#accPwForm").classList.toggle("hidden", st !== "need_password");
+  $("#accPhoneForm").classList.toggle("hidden", !(view === null && currentMethod === "phone"));
+  $("#accMethods").classList.toggle("hidden", !!view && st !== "error");
+  if (st === "waiting_scan" && view.url !== qrShown) {
+    qrShown = view.url; $("#qrBox").innerHTML = "";
+    if (window.QRCode) new QRCode($("#qrBox"), { text: view.url, width: 240, height: 240, correctLevel: QRCode.CorrectLevel.M });
+    else $("#qrBox").textContent = "Could not load the QR library (no internet?). Use the phone number option.";
+  }
+  if (st === "need_code") { $("#accMsg").textContent = "We sent a code to your Telegram app."; $("#accCodeForm").code.focus(); }
+  if (st === "need_password") { $("#accMsg").textContent = ""; $("#accPwForm").password.focus(); }
+  if (st === "error") $("#accMsg").innerHTML = `<span style="color:var(--bad)">${esc(view.error)}</span>`;
+  if (st === "done") { toast(`✅ ${view.account} added`); closeAccModal(true); loadAccounts(); }
+}
+let currentMethod = "qr";
+async function chooseMethod(m) {
+  currentMethod = m; await cancelLogin();
+  document.querySelectorAll("#accMethods button").forEach(b => b.classList.toggle("primary", b.dataset.method === m));
+  $("#accMsg").textContent = "";
+  if (m === "phone") { showLoginStep(null); $("#accPhoneForm").phone.focus(); return; }
+  showLoginStep(null); $("#accMsg").textContent = "Creating QR code…";
+  try { showLoginStep(await api("/accounts/login/qr", "POST")); $("#accMsg").textContent = ""; startLoginPoll(); }
+  catch (err) { $("#accMsg").innerHTML = `<span style="color:var(--bad)">${esc(err.message)}</span>`; }
+}
+function startLoginPoll() {
+  clearInterval(loginPoll);
+  loginPoll = setInterval(async () => {
+    if (!login || login.state !== "waiting_scan") return;
+    try { showLoginStep(await api("/accounts/login/" + login.id)); } catch (err) { clearInterval(loginPoll); $("#accMsg").textContent = err.message; }
+  }, 2000);
+}
+async function cancelLogin() {
+  clearInterval(loginPoll);
+  if (login && login.state !== "done") await api(`/accounts/login/${login.id}/cancel`, "POST").catch(() => {});
+  login = null; qrShown = null;
+}
+async function closeAccModal(done) {
+  if (!done) await cancelLogin(); else { clearInterval(loginPoll); login = null; qrShown = null; }
+  $("#accModal").classList.add("hidden");
+}
+$("#addAccount").onclick = () => {
+  document.querySelectorAll("#accModal input").forEach(i => i.value = "");
+  $("#accModal").classList.remove("hidden"); chooseMethod("qr");
+};
+$("#accClose").onclick = () => closeAccModal(false);
+$("#accMethods").onclick = e => { if (e.target.dataset.method) chooseMethod(e.target.dataset.method); };
+async function loginStep(form, path, body) {
+  const btn = form.querySelector("button"); btn.disabled = true; $("#accMsg").textContent = "Please wait…";
+  try { $("#accMsg").textContent = ""; showLoginStep(await api(path, "POST", body)); }
+  catch (err) { $("#accMsg").innerHTML = `<span style="color:var(--bad)">${esc(err.message)}</span>`; }
+  btn.disabled = false;
+}
+$("#accPhoneForm").onsubmit = e => { e.preventDefault(); loginStep(e.target, "/accounts/login/phone", { phone: e.target.phone.value }); };
+$("#accCodeForm").onsubmit = e => { e.preventDefault(); loginStep(e.target, `/accounts/login/${login.id}/code`, { code: e.target.code.value }); };
+$("#accPwForm").onsubmit = e => { e.preventDefault(); loginStep(e.target, `/accounts/login/${login.id}/password`, { password: e.target.password.value }); };
+
+/* ---------- attachments (photo / voice / video / file) ---------- */
+const MEDIA_LABEL = { photo: "🖼 photo", video: "🎬 video", voice: "🎤 voice", audio: "🎵 audio", file: "📎 file" };
+function mediaPreview(m) {
+  const src = `/api/media/${m.id}/file`;
+  if (m.kind === "photo") return `<img src="${src}" alt="">`;
+  if (m.kind === "video") return `<video src="${src}" controls></video>`;
+  if (m.kind === "voice" || m.kind === "audio") return `<audio src="${src}" controls></audio>`;
+  return `📎 ${esc(m.orig_name)}`;
+}
+// Each .attach element keeps a list of attachments (photos, videos, voice, files) in el._media
+function setAttach(el, list) {
+  el._media = (list || []).filter(Boolean);
+  renderAttach(el);
+}
+function renderAttach(el, status) {
+  const list = el._media || [];
+  const full = list.length >= 10;
+  el.innerHTML = `
+    <div class="att-buttons">
+      <button type="button" class="btn small" data-att="photo" ${full ? "disabled" : ""}>🖼 Photo / video</button>
+      <button type="button" class="btn small" data-att="record" ${full ? "disabled" : ""}>🎤 Record voice</button>
+      <button type="button" class="btn small" data-att="audio" ${full ? "disabled" : ""}>🎵 Upload voice file</button>
+    </div>
+    <div class="att-list">${list.map((m, i) => `
+      <div class="att-item">
+        <div><span class="badge">${MEDIA_LABEL[m.kind] || "📎 file"}</span>
+          <button type="button" class="btn small danger" data-att="remove" data-idx="${i}" title="Remove">✕</button></div>
+        <div style="margin-top:6px">${mediaPreview(m)}</div>
+      </div>`).join("")}</div>
+    <div class="att-preview">${status || (list.length ? `<span class="hint">Sent in this order: photos/videos (with the text) → voice.</span>`
+      : `<span class="hint">Optional: add photos and/or a voice message. ថែមរូបភាព និង/ឬ សំឡេង (មិនចាំបាច់)</span>`)}</div>
+    <input type="file" data-file="photo" accept="image/*,video/*" multiple hidden>
+    <input type="file" data-file="audio" accept="audio/*,.mp3,.m4a,.ogg,.opus" hidden>`;
+}
+const getAttach = el => (el._media || []).map(m => m.id);
+
+async function uploadMedia(blob, name, voice) {
+  const res = await fetch(`/api/media?name=${encodeURIComponent(name)}&voice=${voice ? 1 : 0}`, {
+    method: "POST", credentials: "same-origin", body: blob,
+    headers: { "Content-Type": blob.type || "application/octet-stream", "X-Requested-With": "admin" } });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Upload failed");
+  return data;
+}
+async function attachUpload(el, blob, name, voice) {
+  if ((el._media || []).length >= 10) { toast("At most 10 attachments per reply"); return; }
+  renderAttach(el, `<span class="hint">Uploading ${esc(name)}…</span>`);
+  try {
+    const m = await uploadMedia(blob, name, voice);
+    el._media = [...(el._media || []), m];
+    renderAttach(el);
+    if (m.note) toast(m.note); else toast("Attached — remember to Save");
+  } catch (err) { renderAttach(el, `<span style="color:var(--bad)">${esc(err.message)}</span>`); }
+}
+
+// voice recording in the browser
+let recorder = null;
+function pickRecordingType() {
+  const types = ["audio/ogg;codecs=opus", "audio/mp4;codecs=mp4a.40.2", "audio/mp4", "audio/mpeg", "audio/webm;codecs=opus", "audio/webm"];
+  return types.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || "";
+}
+async function toggleRecording(el, btn) {
+  if (recorder) { recorder.stop(); return; }
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch { toast("Microphone not allowed. Allow microphone access for this page and try again."); return; }
+  const type = pickRecordingType();
+  recorder = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
+  const chunks = []; const started = Date.now();
+  recorder.ondataavailable = e => e.data.size && chunks.push(e.data);
+  recorder.onstop = async () => {
+    stream.getTracks().forEach(t => t.stop()); clearInterval(timer);
+    const mime = recorder.mimeType || type || "audio/webm"; recorder = null;
+    const ext = mime.includes("ogg") ? "ogg" : mime.includes("mp4") ? "m4a" : mime.includes("mpeg") ? "mp3" : "webm";
+    if (Date.now() - started < 700) { renderAttach(el); toast("Recording too short"); return; }
+    await attachUpload(el, new Blob(chunks, { type: mime.split(";")[0] }), "voice." + ext, true);
+  };
+  recorder.start();
+  const box = el.querySelector(".att-preview");
+  const timer = setInterval(() => { box.innerHTML = `<span class="rec-dot"></span> Recording… ${Math.floor((Date.now() - started) / 1000)}s — press <b>Stop</b> when done`; }, 250);
+  btn.textContent = "⏹ Stop"; btn.classList.add("primary");
+}
+document.addEventListener("click", e => {
+  const btn = e.target.closest("[data-att]"); if (!btn) return;
+  const el = btn.closest(".attach"); const act = btn.dataset.att;
+  if (act === "remove") { el._media.splice(Number(btn.dataset.idx), 1); renderAttach(el); }
+  else if (act === "record") toggleRecording(el, btn);
+  else el.querySelector(`[data-file="${act}"]`).click();
+});
+document.addEventListener("change", e => {
+  const input = e.target.closest("[data-file]"); if (!input || !input.files[0]) return;
+  const el = input.closest(".attach"); const files = [...input.files];
+  (async () => { for (const f of files) await attachUpload(el, f, f.name, input.dataset.file === "audio"); })();
+});
+
+/* ---------- rules ---------- */
+let rulesCache = [];
+const MATCH_LABEL = { contains: "contains", exact: "exact", starts: "starts with", regex: "regex" };
+async function loadRules() {
+  rulesCache = await api("/rules");
+  $("#ruleList").innerHTML = rulesCache.length ? rulesCache.map(r => `
+    <div class="rule ${r.enabled ? "" : "off"}">
+      <label class="switch"><input type="checkbox" data-toggle="${r.id}" ${r.enabled ? "checked" : ""}><span></span></label>
+      <div>
+        <b>${esc(r.name)}</b> <span class="badge">${MATCH_LABEL[r.match_type]}</span>
+        <span class="hint"> · priority ${r.priority} · used ${r.hits}×</span>
+        <div class="kw">${r.keywords.split("\n").map(k => `<span>${esc(k)}</span>`).join("")}</div>
+        <div class="reply">${(r.media || []).map(m => `<span class="badge">${MEDIA_LABEL[m.kind] || "📎 file"}</span> `).join("")}${esc(r.reply)}</div>
+      </div>
+      <div class="actions"><button class="btn small" data-edit="${r.id}">Edit</button></div>
+    </div>`).join("")
+    : `<div class="empty">No rules yet. Click “+ New rule”.</div>`;
+}
+$("#ruleList").onclick = e => {
+  const id = e.target.dataset.edit; if (id) openRule(rulesCache.find(r => r.id == id));
+};
+$("#ruleList").onchange = async e => {
+  const id = e.target.dataset.toggle; if (!id) return;
+  const r = rulesCache.find(r => r.id == id);
+  await api("/rules/" + id, "PUT", { ...r, enabled: e.target.checked }); loadRules();
+};
+let editingId = null;
+function openRule(r) {
+  editingId = r?.id ?? null;
+  const f = $("#ruleForm");
+  $("#ruleTitle").textContent = r ? "Edit rule" : "New rule";
+  f.name.value = r?.name ?? ""; f.keywords.value = r?.keywords ?? ""; f.reply.value = r?.reply ?? "";
+  f.match_type.value = r?.match_type ?? "contains"; f.priority.value = r?.priority ?? 100;
+  f.enabled.checked = r ? !!r.enabled : true;
+  setAttach($("#ruleAttach"), r?.media || []);
+  $("#ruleDelete").classList.toggle("hidden", !r); $("#ruleErr").textContent = "";
+  $("#ruleModal").classList.remove("hidden"); f.keywords.focus();
+}
+const closeRule = () => $("#ruleModal").classList.add("hidden");
+$("#addRule").onclick = () => openRule(null);
+$("#ruleCancel").onclick = closeRule;
+$("#ruleModal").onclick = e => { if (e.target.id === "ruleModal") closeRule(); };
+$("#ruleForm").onsubmit = async e => {
+  e.preventDefault(); const f = e.target;
+  const body = { name: f.name.value, keywords: f.keywords.value, reply: f.reply.value,
+    match_type: f.match_type.value, priority: f.priority.value, enabled: f.enabled.checked,
+    media_ids: getAttach($("#ruleAttach")) };
+  try {
+    await api(editingId ? "/rules/" + editingId : "/rules", editingId ? "PUT" : "POST", body);
+    closeRule(); toast("Rule saved"); loadRules();
+  } catch (err) { $("#ruleErr").textContent = err.message; }
+};
+$("#ruleDelete").onclick = async () => {
+  if (!confirm("Delete this rule?")) return;
+  await api("/rules/" + editingId, "DELETE"); closeRule(); toast("Rule deleted"); loadRules();
+};
+// click a {variable} to insert it into the textarea above it
+document.addEventListener("click", e => {
+  if (e.target.tagName !== "CODE" || !e.target.closest(".vars")) return;
+  const ta = e.target.closest(".vars").previousElementSibling;
+  if (ta?.tagName !== "TEXTAREA") return;
+  const p = ta.selectionStart ?? ta.value.length;
+  ta.value = ta.value.slice(0, p) + e.target.textContent + ta.value.slice(p); ta.focus();
+});
+
+/* ---------- settings ---------- */
+async function loadSettings() {
+  const s = await api("/settings"); const f = $("#settingsForm");
+  for (const [k, v] of Object.entries(s)) {
+    const el = f.elements[k]; if (!el) continue;
+    if (el.type === "checkbox") el.checked = !!v; else el.value = v;
+  }
+  setAttach($("#welcomeAttach"), s.welcome_media || []);
+  setAttach($("#fallbackAttach"), s.fallback_media || []);
+}
+$("#settingsForm").onsubmit = async e => {
+  e.preventDefault(); const f = e.target; const body = {};
+  for (const el of f.elements) if (el.name) body[el.name] = el.type === "checkbox" ? el.checked : (el.type === "number" ? Number(el.value || 0) : el.value);
+  body.welcome_media_ids = getAttach($("#welcomeAttach"));
+  body.fallback_media_ids = getAttach($("#fallbackAttach"));
+  try { await api("/settings", "PUT", body); toast("Settings saved"); } catch (err) { toast(err.message); }
+};
+
+/* ---------- chats ---------- */
+let activeChat = null;
+async function loadChats() { await refreshChats(); }
+async function refreshChats() {
+  const chats = await api("/chats");
+  $("#chatList").innerHTML = chats.length ? chats.map(c => `
+    <div class="chat-item ${c.id === activeChat ? "active" : ""}" data-chat="${c.id}">
+      <div class="row"><b>${esc(c.name || "Unknown")}</b><span class="spacer"></span>
+        ${c.bot_disabled ? `<span class="badge bad">bot off</span>` : (c.paused_until && c.paused_until * 1000 > Date.now() ? `<span class="badge warn">paused</span>` : "")}</div>
+      <div class="last">${esc(c.last_text)}</div>
+      ${c.account_name ? `<div class="hint" style="font-size:12px">to ${esc(c.account_name)}</div>` : ""}
+    </div>`).join("") : `<div class="empty">No chats yet</div>`;
+  if (activeChat) loadThread(activeChat, false);
+}
+$("#chatList").onclick = e => {
+  const el = e.target.closest("[data-chat]"); if (!el) return;
+  activeChat = +el.dataset.chat;
+  document.querySelectorAll(".chat-item").forEach(x => x.classList.toggle("active", x === el));
+  loadThread(activeChat, true);
+};
+const DIR_LABEL = { in: "", bot: "🤖 auto", owner: "👤 you (Telegram)", admin: "🖥 you (admin)" };
+async function loadThread(id, scroll) {
+  const { chat, messages, now } = await api("/chats/" + id);
+  const paused = chat.paused_until && chat.paused_until > now;
+  const draft = $("#composerText")?.value ?? "";
+  const msgsEl = $("#msgs");
+  const atBottom = !msgsEl || msgsEl.scrollHeight - msgsEl.scrollTop - msgsEl.clientHeight < 40;
+  $("#thread").innerHTML = `
+    <div class="thread-head row">
+      <div><b>${esc(chat.name)}</b> <span class="hint">${chat.username ? "@" + esc(chat.username) : ""}</span>
+        <div class="hint">${paused ? "Bot paused until " + fmtTime(chat.paused_until) : (chat.bot_disabled ? "Bot is off for this chat" : "Bot is active")}</div></div>
+      <span class="spacer"></span>
+      ${paused ? `<button class="btn small" data-act="resume">Resume bot</button>` : ""}
+      <button class="btn small" data-act="toggle">${chat.bot_disabled ? "Turn bot on" : "Turn bot off"}</button>
+    </div>
+    <div class="msgs" id="msgs">${messages.map(m => `
+      <div class="msg ${m.direction}"><div class="t">${esc(m.text)}</div><div class="meta">${[DIR_LABEL[m.direction], m.direction === "bot" ? m.kind : "", fmtTime(m.created_at)].filter(Boolean).join(" · ")}</div>
+      </div>`).join("") || `<div class="empty">No messages</div>`}</div>
+    <form class="composer" id="composer">
+      <textarea id="composerText" placeholder="Type a reply… (sent from your account)"></textarea>
+      <button class="btn primary">Send</button>
+    </form>`;
+  $("#composerText").value = draft;
+  if (scroll || atBottom) $("#msgs").scrollTop = 1e9;
+  $("#composer").onsubmit = async e => {
+    e.preventDefault(); const text = $("#composerText").value.trim(); if (!text) return;
+    try { await api(`/chats/${id}/send`, "POST", { text }); $("#composerText").value = ""; loadThread(id, true); }
+    catch (err) { toast(err.message); }
+  };
+  $("#composerText").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#composer").requestSubmit(); } };
+  $("#thread .thread-head").onclick = async e => {
+    const act = e.target.dataset.act; if (!act) return;
+    await api("/chats/" + id, "PUT", act === "resume" ? { pause_minutes: 0 } : { bot_disabled: !chat.bot_disabled });
+    refreshChats();
+  };
+}
+
+/* ---------- test ---------- */
+$("#testForm").onsubmit = async e => {
+  e.preventDefault();
+  const r = await api("/test", "POST", { text: $("#testText").value, new_chat: $("#testNew").checked });
+  $("#testOut").innerHTML = (r.bot_enabled ? "" : `<p class="badge bad" style="margin-top:14px">Auto-reply is OFF — nothing would be sent</p>`) +
+    (r.replies.length ? r.replies.map(x => `<div style="margin-top:14px"><span class="badge">${x.kind}${x.rule ? ": " + esc(x.rule) : ""}</span><div class="preview">${(x.media || []).map(m => `<div class="preview-media" style="margin-bottom:6px">${mediaPreview(m)}</div>`).join("")}${esc(x.text)}</div></div>`).join("")
+      : `<p class="hint" style="margin-top:14px">No reply would be sent.</p>`);
+};
+
+/* ---------- boot ---------- */
+api("/status").then(showApp).catch(() => {});
+</script>
+</body>
+</html>

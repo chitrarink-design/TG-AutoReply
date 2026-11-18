@@ -1,0 +1,8 @@
+.env
+data.db
+account.session
+account.session-journal
+sessions/
+media/
+.venv/
+__pycache__/

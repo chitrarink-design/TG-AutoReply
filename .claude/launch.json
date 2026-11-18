@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "admin-test",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": ["-c", "cd /private/tmp/claude-501/-Users-bongtra--claude-spares-spare-rsaXHO/49452bbe-9e28-437a-b791-bccce6be401b/scratchpad/copy && '/Users/bongtra/Desktop/Chitra Rin/CODE/link/auto_reply/.venv/bin/python' app.py"],
+      "port": 8097
+    }
+  ]
+}
